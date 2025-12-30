@@ -87,7 +87,6 @@ def generate_markup_full(quote_data: dict) -> str:
                         <div class="content-element content content--center" style="font-size: {font_size}; line-height: {line_height};">
                             "{quote_data['text']}"
                         </div>
-                        <span class="label label--underline mt-4">— {quote_data['source']}</span>
                     </div>
                 </div>
             </div>
@@ -106,7 +105,6 @@ def generate_markup_half_vertical(quote_data: dict) -> str:
                 <div class="content-element content" style="font-size: 0.95em;">
                     "{quote_data['text']}"
                 </div>
-                <span class="label mt-2">— James Clear</span>
             </div>
         </div>
     </div>
@@ -123,7 +121,6 @@ def generate_markup_half_horizontal(quote_data: dict) -> str:
                 <div class="content-element content" style="font-size: 0.9em;">
                     "{quote_data['text']}"
                 </div>
-                <span class="label mt-2">— JC</span>
             </div>
         </div>
     </div>
@@ -144,7 +141,7 @@ def generate_markup_quadrant(quote_data: dict) -> str:
     """
 
 
-@app.route('/plugin', methods=['POST'])
+@app.route('/plugin', methods=['GET', 'POST'])
 def plugin_endpoint():
     """
     Main plugin endpoint that TRMNL calls to generate screen content
@@ -157,9 +154,13 @@ def plugin_endpoint():
     - Authorization: Bearer token for the user's plugin connection
     """
     try:
-        # Get request data
-        user_uuid = request.form.get('user_uuid')
-        trmnl_data = request.form.get('trmnl')
+        # Get request data (works for both GET and POST)
+        if request.method == 'POST':
+            user_uuid = request.form.get('user_uuid')
+            trmnl_data = request.form.get('trmnl')
+        else:
+            user_uuid = request.args.get('user_uuid')
+            trmnl_data = request.args.get('trmnl')
 
         # Parse TRMNL metadata if present
         metadata = json.loads(trmnl_data) if trmnl_data else {}
