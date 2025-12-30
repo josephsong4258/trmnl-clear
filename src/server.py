@@ -54,7 +54,7 @@ except (FileNotFoundError, json.JSONDecodeError):
 
     quote_manager = QuoteDisplayManager('data/quotes.json')
     print(f"✅ Created sample database with {len(sample_quotes)} quotes")
-    print("   Run the scraper to fetch all quotes: python src/scraper.py")
+    print("   Trigger full scrape: POST to /trigger-scrape endpoint")
 
 
 def generate_markup_full(quote_data: dict) -> str:
@@ -255,6 +255,48 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'quotes_loaded': len(quote_manager.quotes)
     })
+
+
+@app.route('/trigger-scrape', methods=['POST'])
+def trigger_scrape():
+    """
+    Trigger the quote scraper manually
+    Call this endpoint to scrape all quotes from the website
+    """
+    try:
+        print("🔄 Scraper triggered via API...")
+
+        # Import and run scraper
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from scraper import JamesClearScraper
+
+        scraper = JamesClearScraper()
+        quotes = scraper.scrape_all_categories()
+
+        if quotes:
+            scraper.save_quotes(quotes, 'data/quotes.json')
+
+            # Reload quote manager
+            global quote_manager
+            quote_manager = QuoteDisplayManager('data/quotes.json')
+
+            return jsonify({
+                'status': 'success',
+                'message': f'Scraped and loaded {len(quotes)} quotes',
+                'total_quotes': len(quote_manager.quotes)
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Scraper returned no quotes'
+            }), 500
+
+    except Exception as e:
+        print(f"Error during scraping: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 
 if __name__ == '__main__':
