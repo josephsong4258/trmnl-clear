@@ -162,12 +162,12 @@ class QuoteDisplayManager:
             'formatted_at': datetime.now().isoformat()
         }
 
-    def get_daily_quote(self, layout: str = 'full') -> Dict:
+    def get_quote_for_user(self, layout: str = 'full', user_uuid: str = None) -> Dict:
         """
-        Get a random quote without repeats until all quotes have been shown
+        Get a quote for a specific user with no repeats until all quotes shown
 
-        Uses deterministic shuffle based on "epoch" (resets every N quotes)
-        This ensures no repeats within a cycle, but random order
+        Uses user_uuid + current cycle to deterministically select quotes
+        Each user gets quotes in a shuffled order unique to them
         """
         # Get suitable quotes for this layout
         suitable_quotes = []
@@ -182,25 +182,38 @@ class QuoteDisplayManager:
         if not suitable_quotes:
             return None
 
-        # Calculate which "cycle" we're in (resets after showing all quotes)
+        # If no user_uuid provided, use timestamp (legacy behavior)
+        if not user_uuid:
+            import random
+            quote = random.choice(suitable_quotes)
+            if quote:
+                return self.format_for_display(quote, layout)
+            return None
+
+        # Calculate minutes since epoch
         minutes_since_epoch = int(datetime.now().timestamp() / 60)
         total_quotes = len(suitable_quotes)
 
-        # Which cycle are we in? (0, 1, 2, ...)
+        # Determine cycle and position
         cycle_number = minutes_since_epoch // total_quotes
-
-        # Which position within this cycle? (0 to total_quotes-1)
         position_in_cycle = minutes_since_epoch % total_quotes
 
-        # Create a shuffled copy using the cycle number as seed
-        # Same cycle = same shuffle order, different cycle = different shuffle
+        # Create deterministic shuffle based on user_uuid + cycle
+        # Each user gets their own unique shuffle order
         import random
-        shuffled = suitable_quotes.copy()
-        random.seed(cycle_number)  # Deterministic shuffle per cycle
-        random.shuffle(shuffled)
-        random.seed()  # Reset seed
+        import hashlib
 
-        # Get quote at this position
+        # Create seed from user_uuid and cycle_number
+        seed_string = f"{user_uuid}-{cycle_number}"
+        seed = int(hashlib.md5(seed_string.encode()).hexdigest()[:8], 16)
+
+        # Shuffle quotes deterministically
+        shuffled = suitable_quotes.copy()
+        random.seed(seed)
+        random.shuffle(shuffled)
+        random.seed()  # Reset
+
+        # Get quote at current position
         quote = shuffled[position_in_cycle]
 
         if quote:
