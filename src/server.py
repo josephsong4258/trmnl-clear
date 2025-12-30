@@ -15,8 +15,46 @@ from display_manager import QuoteDisplayManager
 
 app = Flask(__name__)
 
-# Initialize quote manager
-quote_manager = QuoteDisplayManager('data/quotes.json')
+# Initialize quote manager - create sample quotes if database doesn't exist
+try:
+    quote_manager = QuoteDisplayManager('data/quotes.json')
+    if not quote_manager.quotes:
+        raise FileNotFoundError("No quotes loaded")
+except (FileNotFoundError, json.JSONDecodeError):
+    # Create sample quotes for initial deployment
+    print("⚠️  No quotes database found. Creating sample quotes...")
+    os.makedirs('data', exist_ok=True)
+
+    sample_quotes = [
+        {
+            'text': 'Every action you take is a vote for the type of person you wish to become.',
+            'category': 'atomic-habits',
+            'source': 'James Clear',
+            'length': 76,
+            'scraped_at': datetime.now().isoformat()
+        },
+        {
+            'text': 'You do not rise to the level of your goals. You fall to the level of your systems.',
+            'category': 'atomic-habits',
+            'source': 'James Clear',
+            'length': 84,
+            'scraped_at': datetime.now().isoformat()
+        },
+        {
+            'text': 'Habits are the compound interest of self-improvement.',
+            'category': 'atomic-habits',
+            'source': 'James Clear',
+            'length': 54,
+            'scraped_at': datetime.now().isoformat()
+        }
+    ]
+
+    with open('data/quotes.json', 'w') as f:
+        json.dump(sample_quotes, f, indent=2)
+
+    quote_manager = QuoteDisplayManager('data/quotes.json')
+    print(f"✅ Created sample database with {len(sample_quotes)} quotes")
+    print("   Run the scraper to fetch all quotes: python src/scraper.py")
 
 
 def generate_markup_full(quote_data: dict) -> str:
