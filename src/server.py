@@ -15,24 +15,28 @@ from display_manager import QuoteDisplayManager
 
 app = Flask(__name__)
 
+# Debug: Print current working directory and file paths
+import os
+print(f"🔍 Current working directory: {os.getcwd()}")
+print(f"🔍 Files in current directory: {os.listdir('.')}")
+if os.path.exists('data'):
+    print(f"🔍 Files in data/ directory: {os.listdir('data')}")
+else:
+    print(f"❌ data/ directory does not exist!")
+print(f"🔍 Does data/quotes.json exist? {os.path.exists('data/quotes.json')}")
+
 # Initialize quote manager - create sample quotes if database doesn't exist
 try:
-    quote_manager = QuoteDisplayManager('../data/quotes.json')
+    quote_manager = QuoteDisplayManager('data/quotes.json')
     if not quote_manager.quotes:
         raise FileNotFoundError("No quotes loaded")
+    print(f"✅ Loaded {len(quote_manager.quotes)} quotes from database")
 except (FileNotFoundError, json.JSONDecodeError):
     # Create sample quotes for initial deployment
-    print("No quotes database found. Creating sample quotes...")
-    os.makedirs('../data', exist_ok=True)
+    print("⚠️  No quotes database found. Creating sample quotes...")
+    os.makedirs('data', exist_ok=True)
 
     sample_quotes = [
-        {
-            'text': 'Every action you take is a vote for the type of person you wish to become.',
-            'category': 'atomic-habits',
-            'source': 'James Clear',
-            'length': 76,
-            'scraped_at': datetime.now().isoformat()
-        },
         {
             'text': 'You do not rise to the level of your goals. You fall to the level of your systems.',
             'category': 'atomic-habits',
@@ -41,19 +45,26 @@ except (FileNotFoundError, json.JSONDecodeError):
             'scraped_at': datetime.now().isoformat()
         },
         {
-            'text': 'Habits are the compound interest of self-improvement.',
+            'text': 'Every action you take is a vote for the type of person you wish to become.',
             'category': 'atomic-habits',
             'source': 'James Clear',
-            'length': 54,
+            'length': 76,
+            'scraped_at': datetime.now().isoformat()
+        },
+        {
+            'text': 'The secret to getting results that last is to never stop making improvements.',
+            'category': 'atomic-habits',
+            'source': 'James Clear',
+            'length': 78,
             'scraped_at': datetime.now().isoformat()
         }
     ]
 
-    with open('../data/quotes.json', 'w') as f:
+    with open('data/quotes.json', 'w') as f:
         json.dump(sample_quotes, f, indent=2)
 
-    quote_manager = QuoteDisplayManager('../data/quotes.json')
-    print(f"Created sample database with {len(sample_quotes)} quotes")
+    quote_manager = QuoteDisplayManager('data/quotes.json')
+    print(f"✅ Created sample database with {len(sample_quotes)} quotes")
     print("   Trigger full scrape: POST to /trigger-scrape endpoint")
 
 
@@ -183,14 +194,14 @@ def plugin_endpoint():
                                   if q.get('category', '') in categories_list]
 
         # Create a temporary quote manager with filtered quotes
-        temp_manager = QuoteDisplayManager('../data/quotes.json')
+        temp_manager = QuoteDisplayManager('data/quotes.json')
 
         # Override with filtered quotes if needed
         if filtered_quotes != quote_manager.quotes:
             temp_manager.quotes = filtered_quotes
             temp_manager.categorize_by_length()
 
-        # Get quotes for each layout type using the user_uuid to track history
+        # Get quotes for each layout type
         quote_full = temp_manager.get_quote_for_user('full', user_uuid)
         quote_half_v = temp_manager.get_quote_for_user('half_vertical', user_uuid)
         quote_half_h = temp_manager.get_quote_for_user('half_horizontal', user_uuid)
@@ -225,11 +236,11 @@ def newsletter_webhook():
         quotes = data.get('quotes', [])
 
         # Add to quotes database
-        quotes_file = '../data/quotes.json'
+        quotes_file = 'data/quotes.json'
         existing_quotes = []
 
         # Ensure data directory exists
-        os.makedirs('../data', exist_ok=True)
+        os.makedirs('data', exist_ok=True)
 
         if os.path.exists(quotes_file):
             with open(quotes_file, 'r', encoding='utf-8') as f:
@@ -252,7 +263,7 @@ def newsletter_webhook():
 
         # Reload quote manager
         global quote_manager
-        quote_manager = QuoteDisplayManager('../data/quotes.json')
+        quote_manager = QuoteDisplayManager('data/quotes.json')
 
         return jsonify({'status': 'success', 'added': len(quotes)})
 
@@ -272,10 +283,10 @@ def get_stats():
 def download_quotes():
     """Download the quotes.json file"""
     try:
-        return send_file('../data/quotes.json',
-                         mimetype='application/json',
-                         as_attachment=True,
-                         download_name='quotes.json')
+        return send_file('data/quotes.json',
+                        mimetype='application/json',
+                        as_attachment=True,
+                        download_name='quotes.json')
     except Exception as e:
         return jsonify({'error': str(e)}), 404
 
@@ -302,7 +313,7 @@ def trigger_scrape():
     def run_scraper_background():
         """Run the scraper in background"""
         try:
-            print("Starting background scraper...")
+            print("🔄 Starting background scraper...")
 
             # Run scraper script as subprocess
             result = subprocess.run(
@@ -313,12 +324,12 @@ def trigger_scrape():
             )
 
             if result.returncode == 0:
-                print("Website scraping complete")
+                print("✅ Website scraping complete")
             else:
-                print(f"Website scraper error: {result.stderr}")
+                print(f"⚠️ Website scraper error: {result.stderr}")
 
             # Run newsletter scraper
-            print("Starting newsletter scraper...")
+            print("📧 Starting newsletter scraper...")
 
             # Import here to avoid blocking
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -329,7 +340,7 @@ def trigger_scrape():
 
             if all_newsletters:
                 # Load existing quotes
-                with open('../data/quotes.json', 'r', encoding='utf-8') as f:
+                with open('data/quotes.json', 'r', encoding='utf-8') as f:
                     existing_quotes = json.load(f)
 
                 newsletter_count = 0
@@ -346,24 +357,24 @@ def trigger_scrape():
                             existing_quotes.append(new_quote)
                             newsletter_count += 1
 
-                with open('../data/quotes.json', 'w', encoding='utf-8') as f:
+                with open('data/quotes.json', 'w', encoding='utf-8') as f:
                     json.dump(existing_quotes, f, indent=2, ensure_ascii=False)
 
-                print(f"Added {newsletter_count} newsletter quotes from {len(all_newsletters)} newsletters")
+                print(f"✅ Added {newsletter_count} newsletter quotes from {len(all_newsletters)} newsletters")
 
                 # Reload quote manager
                 global quote_manager
-                quote_manager = QuoteDisplayManager('../data/quotes.json')
-                print(f"Scraping complete! Total quotes: {len(quote_manager.quotes)}")
+                quote_manager = QuoteDisplayManager('data/quotes.json')
+                print(f"✅ Scraping complete! Total quotes: {len(quote_manager.quotes)}")
             else:
-                print("No newsletter quotes found")
+                print("⚠️ No newsletter quotes found")
 
         except Exception as e:
-            print(f"Background scraper error: {e}")
+            print(f"❌ Background scraper error: {e}")
             import traceback
             traceback.print_exc()
 
-    # Start scraper in background
+    # Start scraper in background thread
     thread = threading.Thread(target=run_scraper_background, daemon=True)
     thread.start()
 
