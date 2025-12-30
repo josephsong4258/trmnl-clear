@@ -155,6 +155,7 @@ def plugin_endpoint():
     - user_uuid: Unique user identifier
     - trmnl: Metadata object with device info
     - refresh_interval: User's selected refresh interval (from form fields)
+    - categories: Comma-separated list of categories to include (from form fields)
 
     Headers include:
     - Authorization: Bearer token for the user's plugin connection
@@ -165,10 +166,12 @@ def plugin_endpoint():
             user_uuid = request.form.get('user_uuid')
             trmnl_data = request.form.get('trmnl')
             user_refresh_interval = request.form.get('refresh_interval', REFRESH_INTERVAL)
+            selected_categories = request.form.get('categories', '')
         else:
             user_uuid = request.args.get('user_uuid')
             trmnl_data = request.args.get('trmnl')
             user_refresh_interval = request.args.get('refresh_interval', REFRESH_INTERVAL)
+            selected_categories = request.args.get('categories', '')
 
         # Parse TRMNL metadata if present
         metadata = json.loads(trmnl_data) if trmnl_data else {}
@@ -178,8 +181,22 @@ def plugin_endpoint():
         width = device.get('width', 800)
         height = device.get('height', 480)
 
-        # Create a temporary quote manager with user's refresh interval preference
+        # Filter quotes by selected categories
+        filtered_quotes = quote_manager.quotes
+        if selected_categories and selected_categories.strip():
+            # Parse comma-separated categories
+            categories_list = [cat.strip() for cat in selected_categories.split(',') if cat.strip()]
+            if categories_list:
+                filtered_quotes = [q for q in quote_manager.quotes
+                                  if q.get('category', '') in categories_list]
+
+        # Create a temporary quote manager with filtered quotes and user's refresh interval
         temp_manager = QuoteDisplayManager('data/quotes.json', refresh_interval=user_refresh_interval)
+
+        # Override with filtered quotes if needed
+        if filtered_quotes != quote_manager.quotes:
+            temp_manager.quotes = filtered_quotes
+            temp_manager.categorize_by_length()
 
         # Get quotes for each layout type
         quote_full = temp_manager.get_daily_quote('full')
@@ -304,36 +321,40 @@ def trigger_scrape():
             scraper.save_quotes(quotes, 'data/quotes.json')
             print(f"✅ Saved {len(quotes)} website quotes")
 
-        # 2. Scrape newsletter
-        print("📧 Scraping newsletter...")
+        # 2. Scrape ALL newsletters (back to 2019)
+        print("📧 Scraping ALL newsletters (2019-present)...")
+        print("⏱️  This will take several minutes - please wait...")
         newsletter_scraper = NewsletterWebScraper()
-        latest_newsletter = newsletter_scraper.get_latest_ideas()
+
+        # Get ALL newsletters
+        all_newsletters = newsletter_scraper.scrape_all_newsletters()
 
         newsletter_count = 0
-        if latest_newsletter and latest_newsletter.get('ideas'):
+        if all_newsletters:
             # Load existing quotes
             with open('data/quotes.json', 'r', encoding='utf-8') as f:
                 existing_quotes = json.load(f)
 
-            # Add newsletter ideas
-            for idea_text in latest_newsletter['ideas']:
-                # Check if already exists
-                if not any(q['text'] == idea_text for q in existing_quotes):
-                    new_quote = {
-                        'text': idea_text,
-                        'category': '3-2-1-newsletter',
-                        'source': 'James Clear - 3-2-1 Newsletter',
-                        'length': len(idea_text),
-                        'scraped_at': datetime.now().isoformat()
-                    }
-                    existing_quotes.append(new_quote)
-                    newsletter_count += 1
+            # Add ideas from all newsletters
+            for newsletter in all_newsletters:
+                for idea_text in newsletter.get('ideas', []):
+                    # Check if already exists
+                    if not any(q['text'] == idea_text for q in existing_quotes):
+                        new_quote = {
+                            'text': idea_text,
+                            'category': '3-2-1-newsletter',
+                            'source': 'James Clear - 3-2-1 Newsletter',
+                            'length': len(idea_text),
+                            'scraped_at': datetime.now().isoformat()
+                        }
+                        existing_quotes.append(new_quote)
+                        newsletter_count += 1
 
             # Save updated quotes
             with open('data/quotes.json', 'w', encoding='utf-8') as f:
                 json.dump(existing_quotes, f, indent=2, ensure_ascii=False)
 
-            print(f"✅ Added {newsletter_count} new newsletter quotes")
+            print(f"✅ Added {newsletter_count} newsletter quotes from {len(all_newsletters)} newsletters")
         else:
             print("⚠️  No newsletter quotes found")
 
