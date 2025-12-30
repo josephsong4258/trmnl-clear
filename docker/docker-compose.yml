@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  web:
+    build: ../../../AppData/Local/Temp
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./quotes.json:/app/quotes.json
+      - ./config.json:/app/config.json
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+
+  updater:
+    build: ../../../AppData/Local/Temp
+    command: python updater.py
+    volumes:
+      - ./quotes.json:/app/quotes.json
+      - ./config.json:/app/config.json
+    depends_on:
+      - web
+    restart: unless-stopped

@@ -1,0 +1,24 @@
+{
+  "email": {
+    "enabled": false,
+    "email": "your-email@gmail.com",
+    "password": "your-app-specific-password",
+    "imap_server": "imap.gmail.com",
+    "note": "Generate an app-specific password in Gmail settings: https://myaccount.google.com/apppasswords"
+  },
+  "trmnl": {
+    "plugin_name": "James Clear Quotes",
+    "plugin_description": "Daily wisdom from James Clear",
+    "plugin_markup_url": "https://your-server.com/plugin",
+    "webhook_url": "https://your-server.com/webhook/newsletter"
+  },
+  "display": {
+    "default_layout": "full",
+    "rotation_enabled": true,
+    "daily_quote": true
+  },
+  "updates": {
+    "website_scrape_schedule": "weekly",
+    "newsletter_check_schedule": "tuesday_wednesday"
+  }
+}
