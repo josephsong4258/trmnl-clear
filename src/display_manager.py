@@ -29,19 +29,14 @@ class QuoteDisplayManager:
         'quadrant': {'min': 0, 'ideal_max': 100, 'absolute_max': 150},
     }
 
-    def __init__(self, quotes_file: str = 'data/quotes.json', refresh_interval: str = 'daily'):
+    def __init__(self, quotes_file: str = 'data/quotes.json'):
         """
         Initialize with quotes database
 
         Args:
             quotes_file: Path to quotes JSON file
-            refresh_interval: How often to change quotes
-                - 'daily': Changes at midnight (default)
-                - 'hourly': Changes every hour
-                - 'every_request': Random quote on each request
         """
         self.quotes_file = quotes_file
-        self.refresh_interval = refresh_interval
         self.quotes = self.load_quotes(quotes_file)
         self.categorize_by_length()
 
@@ -169,28 +164,44 @@ class QuoteDisplayManager:
 
     def get_daily_quote(self, layout: str = 'full') -> Dict:
         """
-        Get the quote based on configured refresh interval
+        Get a random quote without repeats until all quotes have been shown
 
-        Uses seeding for consistency based on refresh_interval setting
+        Uses deterministic shuffle based on "epoch" (resets every N quotes)
+        This ensures no repeats within a cycle, but random order
         """
-        if self.refresh_interval == 'every_request':
-            # Random quote every time
-            random.seed()
-        elif self.refresh_interval == 'hourly':
-            # Seed with date + hour
-            now = datetime.now()
-            seed = int(now.strftime('%Y%m%d%H'))
-            random.seed(seed)
-        else:  # 'daily' (default)
-            # Seed with date only
-            today = datetime.now().date()
-            seed = int(today.strftime('%Y%m%d'))
-            random.seed(seed)
+        # Get suitable quotes for this layout
+        suitable_quotes = []
 
-        quote = self.select_quote_for_layout(layout, random_selection=True)
+        if layout == 'full':
+            suitable_quotes = self.quotes
+        elif layout in ['half_vertical', 'half_horizontal']:
+            suitable_quotes = self.by_length['short'] + self.by_length['medium']
+        elif layout == 'quadrant':
+            suitable_quotes = self.by_length['short']
 
-        # Reset random seed
-        random.seed()
+        if not suitable_quotes:
+            return None
+
+        # Calculate which "cycle" we're in (resets after showing all quotes)
+        minutes_since_epoch = int(datetime.now().timestamp() / 60)
+        total_quotes = len(suitable_quotes)
+
+        # Which cycle are we in? (0, 1, 2, ...)
+        cycle_number = minutes_since_epoch // total_quotes
+
+        # Which position within this cycle? (0 to total_quotes-1)
+        position_in_cycle = minutes_since_epoch % total_quotes
+
+        # Create a shuffled copy using the cycle number as seed
+        # Same cycle = same shuffle order, different cycle = different shuffle
+        import random
+        shuffled = suitable_quotes.copy()
+        random.seed(cycle_number)  # Deterministic shuffle per cycle
+        random.shuffle(shuffled)
+        random.seed()  # Reset seed
+
+        # Get quote at this position
+        quote = shuffled[position_in_cycle]
 
         if quote:
             return self.format_for_display(quote, layout)
