@@ -17,13 +17,21 @@ app = Flask(__name__)
 
 # Debug: Print current working directory and file paths
 import os
-print(f"🔍 Current working directory: {os.getcwd()}")
-print(f"🔍 Files in current directory: {os.listdir('.')}")
+print(f"DEBUG: Current working directory: {os.getcwd()}")
+print(f"DEBUG: Files in current directory: {os.listdir('.')}")
 if os.path.exists('data'):
-    print(f"🔍 Files in data/ directory: {os.listdir('data')}")
+    print(f"DEBUG: Files in data/ directory: {os.listdir('data')}")
 else:
-    print(f"❌ data/ directory does not exist!")
-print(f"🔍 Does data/quotes.json exist? {os.path.exists('data/quotes.json')}")
+    print(f"ERROR: data/ directory does not exist!")
+print(f"DEBUG: Does data/quotes.json exist? {os.path.exists('data/quotes.json')}")
+if os.path.exists('data/quotes.json'):
+    file_size = os.path.getsize('data/quotes.json')
+    print(f"DEBUG: File size: {file_size} bytes ({file_size/1024:.1f} KB)")
+    # Read first 200 chars
+    with open('data/quotes.json', 'r') as f:
+        preview = f.read(200)
+        print(f"DEBUG: File preview: {preview}...")
+
 
 # Initialize quote manager - create sample quotes if database doesn't exist
 try:
