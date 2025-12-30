@@ -29,8 +29,19 @@ class QuoteDisplayManager:
         'quadrant': {'min': 0, 'ideal_max': 100, 'absolute_max': 150},
     }
 
-    def __init__(self, quotes_file: str = 'data/quotes.json'):
-        """Initialize with quotes database"""
+    def __init__(self, quotes_file: str = 'data/quotes.json', refresh_interval: str = 'daily'):
+        """
+        Initialize with quotes database
+
+        Args:
+            quotes_file: Path to quotes JSON file
+            refresh_interval: How often to change quotes
+                - 'daily': Changes at midnight (default)
+                - 'hourly': Changes every hour
+                - 'every_request': Random quote on each request
+        """
+        self.quotes_file = quotes_file
+        self.refresh_interval = refresh_interval
         self.quotes = self.load_quotes(quotes_file)
         self.categorize_by_length()
 
@@ -158,14 +169,23 @@ class QuoteDisplayManager:
 
     def get_daily_quote(self, layout: str = 'full') -> Dict:
         """
-        Get the quote of the day
+        Get the quote based on configured refresh interval
 
-        Uses date-based seeding for consistency throughout the day
+        Uses seeding for consistency based on refresh_interval setting
         """
-        # Seed random with today's date for consistency
-        today = datetime.now().date()
-        seed = int(today.strftime('%Y%m%d'))
-        random.seed(seed)
+        if self.refresh_interval == 'every_request':
+            # Random quote every time
+            random.seed()
+        elif self.refresh_interval == 'hourly':
+            # Seed with date + hour
+            now = datetime.now()
+            seed = int(now.strftime('%Y%m%d%H'))
+            random.seed(seed)
+        else:  # 'daily' (default)
+            # Seed with date only
+            today = datetime.now().date()
+            seed = int(today.strftime('%Y%m%d'))
+            random.seed(seed)
 
         quote = self.select_quote_for_layout(layout, random_selection=True)
 
