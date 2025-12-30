@@ -15,9 +15,13 @@ from display_manager import QuoteDisplayManager
 
 app = Flask(__name__)
 
+# Get refresh interval from environment variable (default: daily)
+# Options: 'daily', 'hourly', 'every_request'
+REFRESH_INTERVAL = os.environ.get('QUOTE_REFRESH_INTERVAL', 'daily')
+
 # Initialize quote manager - create sample quotes if database doesn't exist
 try:
-    quote_manager = QuoteDisplayManager('data/quotes.json')
+    quote_manager = QuoteDisplayManager('data/quotes.json', refresh_interval=REFRESH_INTERVAL)
     if not quote_manager.quotes:
         raise FileNotFoundError("No quotes loaded")
 except (FileNotFoundError, json.JSONDecodeError):
@@ -52,8 +56,9 @@ except (FileNotFoundError, json.JSONDecodeError):
     with open('data/quotes.json', 'w') as f:
         json.dump(sample_quotes, f, indent=2)
 
-    quote_manager = QuoteDisplayManager('data/quotes.json')
+    quote_manager = QuoteDisplayManager('data/quotes.json', refresh_interval=REFRESH_INTERVAL)
     print(f"✅ Created sample database with {len(sample_quotes)} quotes")
+    print(f"   Quote refresh interval: {REFRESH_INTERVAL}")
     print("   Trigger full scrape: POST to /trigger-scrape endpoint")
 
 
@@ -149,6 +154,7 @@ def plugin_endpoint():
     Request includes:
     - user_uuid: Unique user identifier
     - trmnl: Metadata object with device info
+    - refresh_interval: User's selected refresh interval (from form fields)
 
     Headers include:
     - Authorization: Bearer token for the user's plugin connection
@@ -158,9 +164,11 @@ def plugin_endpoint():
         if request.method == 'POST':
             user_uuid = request.form.get('user_uuid')
             trmnl_data = request.form.get('trmnl')
+            user_refresh_interval = request.form.get('refresh_interval', REFRESH_INTERVAL)
         else:
             user_uuid = request.args.get('user_uuid')
             trmnl_data = request.args.get('trmnl')
+            user_refresh_interval = request.args.get('refresh_interval', REFRESH_INTERVAL)
 
         # Parse TRMNL metadata if present
         metadata = json.loads(trmnl_data) if trmnl_data else {}
@@ -170,11 +178,14 @@ def plugin_endpoint():
         width = device.get('width', 800)
         height = device.get('height', 480)
 
+        # Create a temporary quote manager with user's refresh interval preference
+        temp_manager = QuoteDisplayManager('data/quotes.json', refresh_interval=user_refresh_interval)
+
         # Get quotes for each layout type
-        quote_full = quote_manager.get_daily_quote('full')
-        quote_half_v = quote_manager.get_daily_quote('half_vertical')
-        quote_half_h = quote_manager.get_daily_quote('half_horizontal')
-        quote_quad = quote_manager.get_daily_quote('quadrant')
+        quote_full = temp_manager.get_daily_quote('full')
+        quote_half_v = temp_manager.get_daily_quote('half_vertical')
+        quote_half_h = temp_manager.get_daily_quote('half_horizontal')
+        quote_quad = temp_manager.get_daily_quote('quadrant')
 
         # Generate markup for all layouts
         response = {
@@ -262,38 +273,74 @@ def health_check():
 def trigger_scrape():
     """
     Trigger the quote scraper manually
-    Call this endpoint to scrape all quotes from the website
+    Scrapes both website categories AND newsletter
     """
     try:
         print("🔄 Scraper triggered via API...")
 
-        # Import and run scraper
+        # Import scrapers
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from scraper import JamesClearScraper
+        from newsletter_scraper import NewsletterWebScraper
 
+        # 1. Scrape website categories
+        print("📚 Scraping website categories...")
         scraper = JamesClearScraper()
         quotes = scraper.scrape_all_categories()
 
         if quotes:
             scraper.save_quotes(quotes, 'data/quotes.json')
+            print(f"✅ Saved {len(quotes)} website quotes")
 
-            # Reload quote manager
-            global quote_manager
-            quote_manager = QuoteDisplayManager('data/quotes.json')
+        # 2. Scrape newsletter
+        print("📧 Scraping newsletter...")
+        newsletter_scraper = NewsletterWebScraper()
+        latest_newsletter = newsletter_scraper.get_latest_ideas()
 
-            return jsonify({
-                'status': 'success',
-                'message': f'Scraped and loaded {len(quotes)} quotes',
-                'total_quotes': len(quote_manager.quotes)
-            })
+        newsletter_count = 0
+        if latest_newsletter and latest_newsletter.get('ideas'):
+            # Load existing quotes
+            with open('data/quotes.json', 'r', encoding='utf-8') as f:
+                existing_quotes = json.load(f)
+
+            # Add newsletter ideas
+            for idea_text in latest_newsletter['ideas']:
+                # Check if already exists
+                if not any(q['text'] == idea_text for q in existing_quotes):
+                    new_quote = {
+                        'text': idea_text,
+                        'category': '3-2-1-newsletter',
+                        'source': 'James Clear - 3-2-1 Newsletter',
+                        'length': len(idea_text),
+                        'scraped_at': datetime.now().isoformat()
+                    }
+                    existing_quotes.append(new_quote)
+                    newsletter_count += 1
+
+            # Save updated quotes
+            with open('data/quotes.json', 'w', encoding='utf-8') as f:
+                json.dump(existing_quotes, f, indent=2, ensure_ascii=False)
+
+            print(f"✅ Added {newsletter_count} new newsletter quotes")
         else:
-            return jsonify({
-                'status': 'error',
-                'message': 'Scraper returned no quotes'
-            }), 500
+            print("⚠️  No newsletter quotes found")
+
+        # Reload quote manager
+        global quote_manager
+        quote_manager = QuoteDisplayManager('data/quotes.json', refresh_interval=REFRESH_INTERVAL)
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Scraped {len(quotes)} website quotes + {newsletter_count} newsletter quotes',
+            'website_quotes': len(quotes),
+            'newsletter_quotes': newsletter_count,
+            'total_quotes': len(quote_manager.quotes)
+        })
 
     except Exception as e:
         print(f"Error during scraping: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'status': 'error',
             'message': str(e)
