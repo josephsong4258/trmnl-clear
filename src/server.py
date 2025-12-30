@@ -363,7 +363,7 @@ def trigger_scrape():
             import traceback
             traceback.print_exc()
 
-    # Start scraper in background thread
+    # Start scraper in background
     thread = threading.Thread(target=run_scraper_background, daemon=True)
     thread.start()
 
