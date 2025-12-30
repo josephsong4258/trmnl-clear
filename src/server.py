@@ -17,13 +17,13 @@ app = Flask(__name__)
 
 # Initialize quote manager - create sample quotes if database doesn't exist
 try:
-    quote_manager = QuoteDisplayManager('data/quotes.json')
+    quote_manager = QuoteDisplayManager('../data/quotes.json')
     if not quote_manager.quotes:
         raise FileNotFoundError("No quotes loaded")
 except (FileNotFoundError, json.JSONDecodeError):
     # Create sample quotes for initial deployment
     print("No quotes database found. Creating sample quotes...")
-    os.makedirs('data', exist_ok=True)
+    os.makedirs('../data', exist_ok=True)
 
     sample_quotes = [
         {
@@ -49,10 +49,10 @@ except (FileNotFoundError, json.JSONDecodeError):
         }
     ]
 
-    with open('data/quotes.json', 'w') as f:
+    with open('../data/quotes.json', 'w') as f:
         json.dump(sample_quotes, f, indent=2)
 
-    quote_manager = QuoteDisplayManager('data/quotes.json')
+    quote_manager = QuoteDisplayManager('../data/quotes.json')
     print(f"Created sample database with {len(sample_quotes)} quotes")
     print("   Trigger full scrape: POST to /trigger-scrape endpoint")
 
@@ -183,7 +183,7 @@ def plugin_endpoint():
                                   if q.get('category', '') in categories_list]
 
         # Create a temporary quote manager with filtered quotes
-        temp_manager = QuoteDisplayManager('data/quotes.json')
+        temp_manager = QuoteDisplayManager('../data/quotes.json')
 
         # Override with filtered quotes if needed
         if filtered_quotes != quote_manager.quotes:
@@ -225,11 +225,11 @@ def newsletter_webhook():
         quotes = data.get('quotes', [])
 
         # Add to quotes database
-        quotes_file = 'data/quotes.json'
+        quotes_file = '../data/quotes.json'
         existing_quotes = []
 
         # Ensure data directory exists
-        os.makedirs('data', exist_ok=True)
+        os.makedirs('../data', exist_ok=True)
 
         if os.path.exists(quotes_file):
             with open(quotes_file, 'r', encoding='utf-8') as f:
@@ -252,7 +252,7 @@ def newsletter_webhook():
 
         # Reload quote manager
         global quote_manager
-        quote_manager = QuoteDisplayManager('data/quotes.json')
+        quote_manager = QuoteDisplayManager('../data/quotes.json')
 
         return jsonify({'status': 'success', 'added': len(quotes)})
 
@@ -272,10 +272,10 @@ def get_stats():
 def download_quotes():
     """Download the quotes.json file"""
     try:
-        return send_file('data/quotes.json',
-                        mimetype='application/json',
-                        as_attachment=True,
-                        download_name='quotes.json')
+        return send_file('../data/quotes.json',
+                         mimetype='application/json',
+                         as_attachment=True,
+                         download_name='quotes.json')
     except Exception as e:
         return jsonify({'error': str(e)}), 404
 
@@ -329,7 +329,7 @@ def trigger_scrape():
 
             if all_newsletters:
                 # Load existing quotes
-                with open('data/quotes.json', 'r', encoding='utf-8') as f:
+                with open('../data/quotes.json', 'r', encoding='utf-8') as f:
                     existing_quotes = json.load(f)
 
                 newsletter_count = 0
@@ -346,14 +346,14 @@ def trigger_scrape():
                             existing_quotes.append(new_quote)
                             newsletter_count += 1
 
-                with open('data/quotes.json', 'w', encoding='utf-8') as f:
+                with open('../data/quotes.json', 'w', encoding='utf-8') as f:
                     json.dump(existing_quotes, f, indent=2, ensure_ascii=False)
 
                 print(f"Added {newsletter_count} newsletter quotes from {len(all_newsletters)} newsletters")
 
                 # Reload quote manager
                 global quote_manager
-                quote_manager = QuoteDisplayManager('data/quotes.json')
+                quote_manager = QuoteDisplayManager('../data/quotes.json')
                 print(f"Scraping complete! Total quotes: {len(quote_manager.quotes)}")
             else:
                 print("No newsletter quotes found")

@@ -21,7 +21,7 @@ print(f"📊 Total ideas: {sum(len(n['ideas']) for n in newsletters)}")
 
 # Load existing quotes
 print("\n📂 Loading existing quotes...")
-with open('data/quotes.json', 'r', encoding='utf-8') as f:
+with open('../data/quotes.json', 'r', encoding='utf-8') as f:
     quotes = json.load(f)
 
 print(f"   Found {len(quotes)} existing quotes")
@@ -45,7 +45,7 @@ print(f"\n✨ Added {added} new newsletter quotes")
 
 # Save
 print("\n💾 Saving to data/quotes.json...")
-with open('data/quotes.json', 'w', encoding='utf-8') as f:
+with open('../data/quotes.json', 'w', encoding='utf-8') as f:
     json.dump(quotes, f, indent=2, ensure_ascii=False)
 
 print(f"\n✅ COMPLETE!")

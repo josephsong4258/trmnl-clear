@@ -250,7 +250,7 @@ class NewsletterWebScraper:
     def save_newsletter_ideas(self, newsletters: List[Dict], filename: str = 'data/newsletter_ideas.json'):
         """Save newsletter ideas to file"""
         import os
-        os.makedirs('data', exist_ok=True)
+        os.makedirs('../data', exist_ok=True)
 
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(newsletters, f, indent=2, ensure_ascii=False)

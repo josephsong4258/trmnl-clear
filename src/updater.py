@@ -65,11 +65,11 @@ class QuoteUpdater:
     def merge_newsletter_quotes(self, newsletters: list):
         """Merge newsletter quotes with existing database"""
         # Load existing quotes
-        quotes_file = 'data/quotes.json'
+        quotes_file = '../data/quotes.json'
         existing_quotes = []
 
         # Ensure data directory exists
-        os.makedirs('data', exist_ok=True)
+        os.makedirs('../data', exist_ok=True)
 
         if os.path.exists(quotes_file):
             with open(quotes_file, 'r', encoding='utf-8') as f:
