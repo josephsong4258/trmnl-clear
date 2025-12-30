@@ -3,7 +3,7 @@ TRMNL Plugin Server
 Flask server that responds to TRMNL's plugin requests
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import json
 import os
 from datetime import datetime
@@ -257,6 +257,18 @@ def get_stats():
     """Get statistics about the quote database"""
     stats = quote_manager.get_stats()
     return jsonify(stats)
+
+
+@app.route('/download-quotes', methods=['GET'])
+def download_quotes():
+    """Download the quotes.json file"""
+    try:
+        return send_file('data/quotes.json',
+                        mimetype='application/json',
+                        as_attachment=True,
+                        download_name='quotes.json')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 404
 
 
 @app.route('/health', methods=['GET'])
