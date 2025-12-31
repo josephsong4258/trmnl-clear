@@ -151,8 +151,7 @@ def generate_markup_quadrant(quote_data: dict) -> str:
     return f"""
     <div class="view view--quadrant">
         <div class="markdown gap--small">
-            <span class="label">Wisdom</span>
-            <div class="content-element" style="font-size: 0.8em;">
+            <div class="content-element content--center" style="font-size: 1.1em; line-height: 1.4; font-weight: bold;">
                 "{quote_data['text']}"
             </div>
         </div>
