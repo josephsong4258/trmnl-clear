@@ -83,17 +83,17 @@ def generate_markup_full(quote_data: dict) -> str:
     text_length = len(quote_data['text'])
 
     if text_length < 150:
-        font_size = '1.4em'
+        font_size = '1.6em'
         line_height = '1.8'
     elif text_length < 300:
-        font_size = '1.2em'
+        font_size = '1.4em'
         line_height = '1.6'
     elif text_length < 600:
-        font_size = '1.0em'
+        font_size = '1.2em'
         line_height = '1.5'
     else:
         # Very long quotes
-        font_size = '0.85em'
+        font_size = '1.0em'
         line_height = '1.4'
 
     return f"""
@@ -102,8 +102,8 @@ def generate_markup_full(quote_data: dict) -> str:
             <div class="columns">
                 <div class="column">
                     <div class="markdown gap--large">
-                        <span class="title">Daily Wisdom</span>
-                        <div class="content-element content content--center" style="font-size: {font_size}; line-height: {line_height};">
+                        <span class="title" style="font-family: 'Georgia', serif; letter-spacing: 0.5px;">Daily Wisdom</span>
+                        <div class="content-element content content--center" style="font-size: {font_size}; line-height: {line_height}; font-weight: 500; font-family: 'Charter', 'Georgia', serif; letter-spacing: 0.3px;">
                             "{quote_data['text']}"
                         </div>
                     </div>
@@ -120,8 +120,8 @@ def generate_markup_half_vertical(quote_data: dict) -> str:
     <div class="view view--half_vertical">
         <div class="layout">
             <div class="markdown gap--medium">
-                <span class="subtitle">Daily Wisdom</span>
-                <div class="content-element content" style="font-size: 0.95em;">
+                <span class="subtitle" style="font-family: 'Georgia', serif; letter-spacing: 0.5px;">Daily Wisdom</span>
+                <div class="content-element content" style="font-size: 1.05em; font-weight: 500; line-height: 1.5; font-family: 'Charter', 'Georgia', serif; letter-spacing: 0.2px;">
                     "{quote_data['text']}"
                 </div>
             </div>
@@ -136,8 +136,8 @@ def generate_markup_half_horizontal(quote_data: dict) -> str:
     <div class="view view--half_horizontal">
         <div class="layout">
             <div class="markdown gap--medium">
-                <span class="subtitle">Daily Wisdom</span>
-                <div class="content-element content" style="font-size: 0.9em;">
+                <span class="subtitle" style="font-family: 'Georgia', serif; letter-spacing: 0.5px;">Daily Wisdom</span>
+                <div class="content-element content" style="font-size: 1.0em; font-weight: 500; line-height: 1.5; font-family: 'Charter', 'Georgia', serif; letter-spacing: 0.2px;">
                     "{quote_data['text']}"
                 </div>
             </div>
@@ -151,7 +151,7 @@ def generate_markup_quadrant(quote_data: dict) -> str:
     return f"""
     <div class="view view--quadrant">
         <div class="markdown gap--small" style="display: flex; align-items: center; justify-content: center; text-align: center; height: 100%;">
-            <div class="content-element" style="font-size: 1.1em; line-height: 1.4; font-weight: bold;">
+            <div class="content-element" style="font-size: 1.1em; line-height: 1.4; font-weight: 500; font-family: 'Charter', 'Georgia', serif; letter-spacing: 0.2px;">
                 "{quote_data['text']}"
             </div>
         </div>
