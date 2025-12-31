@@ -150,8 +150,8 @@ def generate_markup_quadrant(quote_data: dict) -> str:
     """Generate HTML markup for quadrant layout"""
     return f"""
     <div class="view view--quadrant">
-        <div class="markdown gap--small">
-            <div class="content-element content--center" style="font-size: 1.1em; line-height: 1.4; font-weight: bold;">
+        <div class="markdown gap--small" style="display: flex; align-items: center; justify-content: center; text-align: center; height: 100%;">
+            <div class="content-element" style="font-size: 1.1em; line-height: 1.4; font-weight: bold;">
                 "{quote_data['text']}"
             </div>
         </div>
